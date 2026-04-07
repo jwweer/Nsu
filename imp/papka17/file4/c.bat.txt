@@ -1,0 +1,2 @@
+cl /c matrixsqr.c myblas.c /O2
+link matrixsqr.obj myblas.obj /OUT:checked_solution.exe

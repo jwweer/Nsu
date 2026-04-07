@@ -1,0 +1,5 @@
+---
+triple:          'arm64-apple-darwin'
+binary-path:     '/Users/ksenia/papka1/papka15/file1.15'
+relocations:     []
+...

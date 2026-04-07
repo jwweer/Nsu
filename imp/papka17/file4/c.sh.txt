@@ -1,0 +1,2 @@
+gcc -c matrixsqr.c myblas.c -O2
+gcc matrixsqr.o myblas.o -o checked_solution -L. -lopenblas

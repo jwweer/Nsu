@@ -1,0 +1,1 @@
+gcc  -Izlib -Izlib/minizip test.c zlib/*.c zlib/minizip/unzip.c zlib/minizip/ioapi.c -o checked_solution -DUSE_CRYPT -DZ_HAVE_UNISTD_H
