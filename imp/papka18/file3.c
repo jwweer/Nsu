@@ -4,117 +4,68 @@
 
 #define MAXN 500005
 
-int *sa, *rank;
+int t[MAXN * 3], sa[MAXN * 3], rk[MAXN], tmp[MAXN];
 
-void radix_sort(int *a, int *b, int *c, int n, int k) {
-    int *cnt = (int*)calloc(k + 1, sizeof(int));
-    for (int i = 0; i < n; i++) cnt[c[a[i]]]++;
-    for (int i = 1; i <= k; i++) cnt[i] += cnt[i - 1];
-    for (int i = n - 1; i >= 0; i--) b[--cnt[c[a[i]]]] = a[i];
+int cmp(int *s, int a, int b, int k, int n) {
+    if (rk[a] != rk[b]) return rk[a] < rk[b];
+    int ra = a + k <= n ? rk[a + k] : -1;
+    int rb = b + k <= n ? rk[b + k] : -1;
+    return ra < rb;
+}
+
+void csort(int *s, int *sa, int n, int m) {
+    int *cnt = (int*)calloc(m + 1, sizeof(int));
+    for (int i = 0; i < n; i++) cnt[s[sa[i]]]++;
+    for (int i = 1; i <= m; i++) cnt[i] += cnt[i - 1];
+    for (int i = n - 1; i >= 0; i--) tmp[--cnt[s[sa[i]]]] = sa[i];
+    for (int i = 0; i < n; i++) sa[i] = tmp[i];
     free(cnt);
 }
 
-void dc3(int *s, int *sa, int n, int K) {
-    int *s12 = (int*)malloc((n + 5) * sizeof(int));
-    int *sa12 = (int*)malloc((n + 5) * sizeof(int));
-    int *s0 = (int*)malloc((n + 5) * sizeof(int));
-    int *sa0 = (int*)malloc((n + 5) * sizeof(int));
+void build_sa(int *s, int *sa, int n, int m) {
+    int *ns = (int*)malloc(n * sizeof(int));
+    int *nsa = (int*)malloc(n * sizeof(int));
     
-    int n12 = 0;
-    for (int i = 0; i < n + (n % 3 == 1 ? 1 : 0); i++) {
-        if (i % 3 != 0) {
-            s12[n12++] = i;
+    for (int i = 0; i < n; i++) sa[i] = i;
+    csort(s, sa, n, m);
+    
+    rk[sa[0]] = 1;
+    for (int i = 1; i < n; i++) {
+        rk[sa[i]] = rk[sa[i - 1]] + (s[sa[i]] != s[sa[i - 1]]);
+    }
+    
+    for (int k = 1; k < n; k <<= 1) {
+        int p = 0;
+        for (int i = n - k; i < n; i++) nsa[p++] = i;
+        for (int i = 0; i < n; i++) if (sa[i] >= k) nsa[p++] = sa[i] - k;
+        
+        csort(rk, nsa, n, rk[sa[n - 1]]);
+        
+        tmp[nsa[0]] = 1;
+        for (int i = 1; i < n; i++) {
+            tmp[nsa[i]] = tmp[nsa[i - 1]] + cmp(s, nsa[i - 1], nsa[i], k, n);
         }
+        
+        for (int i = 0; i < n; i++) rk[i] = tmp[i];
+        for (int i = 0; i < n; i++) sa[i] = nsa[i];
     }
     
-    radix_sort(s12, sa12, s + 2, n12, K);
-    radix_sort(sa12, s12, s + 1, n12, K);
-    radix_sort(s12, sa12, s, n12, K);
-    
-    int rank12 = 0;
-    int last[3] = {-1, -1, -1};
-    for (int i = 0; i < n12; i++) {
-        int idx = sa12[i];
-        if (s[idx] != last[0] || s[idx + 1] != last[1] || s[idx + 2] != last[2]) {
-            rank12++;
-            last[0] = s[idx];
-            last[1] = s[idx + 1];
-            last[2] = s[idx + 2];
-        }
-        s12[idx] = rank12;
-    }
-    
-    if (rank12 < n12) {
-        dc3(s12, sa12, n12, rank12);
-        for (int i = 0; i < n12; i++) {
-            s12[sa12[i]] = i + 1;
-        }
-    } else {
-        for (int i = 0; i < n12; i++) {
-            sa12[s12[i] - 1] = i;
-        }
-    }
-    
-    int n0 = 0;
-    for (int i = 0; i < n; i += 3) {
-        s0[n0++] = i;
-    }
-    radix_sort(s0, sa0, s, n0, K);
-    
-    int p = 0, q = 0;
-    int *rank12_arr = (int*)calloc(n + 5, sizeof(int));
-    for (int i = 0; i < n12; i++) {
-        rank12_arr[sa12[i]] = i + 1;
-    }
-    
-    while (p < n0 && q < n12) {
-        int i = sa0[p];
-        int j = sa12[q];
-        if (j % 3 == 1) {
-            if (s[i] < s[j] || (s[i] == s[j] && rank12_arr[i + 1] < rank12_arr[j + 1])) {
-                sa[p + q] = i;
-                p++;
-            } else {
-                sa[p + q] = j;
-                q++;
-            }
-        } else {
-            if (s[i] < s[j] || (s[i] == s[j] && s[i + 1] < s[j + 1]) ||
-                (s[i] == s[j] && s[i + 1] == s[j + 1] && rank12_arr[i + 2] < rank12_arr[j + 2])) {
-                sa[p + q] = i;
-                p++;
-            } else {
-                sa[p + q] = j;
-                q++;
-            }
-        }
-    }
-    
-    while (p < n0) sa[p + q] = sa0[p++];
-    while (q < n12) sa[p + q] = sa12[q++];
-    
-    free(s12);
-    free(sa12);
-    free(s0);
-    free(sa0);
-    free(rank12_arr);
+    free(ns);
+    free(nsa);
 }
 
 int main() {
-    char *s = (char*)malloc(MAXN);
-    scanf("%s", s);
-    int n = strlen(s);
+    char str[MAXN];
+    scanf("%s", str);
+    int n = strlen(str);
     
-    int *t = (int*)malloc((n + 5) * sizeof(int));
+    int *s = (int*)malloc((n + 1) * sizeof(int));
     for (int i = 0; i < n; i++) {
-        t[i] = s[i] - 'a' + 1;
+        s[i] = str[i] - 'a' + 1;
     }
-    t[n] = 0;
+    s[n] = 0;
     
-    sa = (int*)malloc((n + 5) * sizeof(int));
-    rank = (int*)malloc((n + 5) * sizeof(int));
-    
-    dc3(t, sa, n + 1, 27);
+    build_sa(s, sa, n + 1, 26);
     
     for (int i = 1; i <= n; i++) {
         printf("%d ", sa[i]);
@@ -122,9 +73,5 @@ int main() {
     printf("\n");
     
     free(s);
-    free(t);
-    free(sa);
-    free(rank);
-    
     return 0;
 }
