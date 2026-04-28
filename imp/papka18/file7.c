@@ -3,299 +3,313 @@
 #include <string.h>
 #include <ctype.h>
 
-typedef struct Value {
-    int type; // 0: null, 1: bool, 2: number, 3: string, 4: object, 5: array
+typedef enum {
+    JSON_OBJECT,
+    JSON_ARRAY,
+    JSON_STRING,
+    JSON_NUMBER,
+    JSON_BOOLEAN,
+    JSON_NULL
+} JsonType;
+
+typedef struct JsonValue {
+    JsonType type;
     union {
-        int bool_val;
-        double num_val;
-        char* str_val;
-        struct Object* obj_val;
-        struct Array* arr_val;
+        struct {
+            char **keys;
+            struct JsonValue **values;
+            int count;
+        } object;
+        struct {
+            struct JsonValue **items;
+            int count;
+        } array;
+        char *string;
+        char *number;
+        int boolean;
     };
-} Value;
+} JsonValue;
 
-typedef struct Object {
-    char** keys;
-    Value** values;
-    int count;
-    int capacity;
-} Object;
+void skip_spaces(char **s) {
+    while (**s && isspace((unsigned char)**s)) (*s)++;
+}
 
-typedef struct Array {
-    Value** items;
-    int count;
-    int capacity;
-} Array;
+char *parse_string(char **s) {
+    skip_spaces(s);
+    if (**s != '"') return NULL;
+    (*s)++;
+    char *start = *s;
+    while (**s && **s != '"') (*s)++;
+    int len = *s - start;
+    char *str = malloc(len + 1);
+    memcpy(str, start, len);
+    str[len] = '\0';
+    if (**s == '"') (*s)++;
+    return str;
+}
 
-typedef struct Parser {
-    char* json;
-    int pos;
-    int len;
-} Parser;
+JsonValue *parse_value(char **s);
 
-void skip_whitespace(Parser* p) {
-    while (p->pos < p->len && isspace(p->json[p->pos])) {
-        p->pos++;
+JsonValue *parse_object(char **s) {
+    skip_spaces(s);
+    if (**s != '{') return NULL;
+    (*s)++;
+    
+    JsonValue *val = malloc(sizeof(JsonValue));
+    val->type = JSON_OBJECT;
+    val->object.keys = NULL;
+    val->object.values = NULL;
+    val->object.count = 0;
+    
+    skip_spaces(s);
+    if (**s == '}') {
+        (*s)++;
+        return val;
     }
-}
-
-char peek(Parser* p) {
-    skip_whitespace(p);
-    return p->pos < p->len ? p->json[p->pos] : 0;
-}
-
-char next(Parser* p) {
-    skip_whitespace(p);
-    return p->pos < p->len ? p->json[p->pos++] : 0;
-}
-
-Value* parse_value(Parser* p);
-
-Value* parse_string(Parser* p) {
-    if (next(p) != '"') return NULL;
-    
-    int start = p->pos;
-    while (p->pos < p->len && p->json[p->pos] != '"') {
-        p->pos++;
-    }
-    
-    int len = p->pos - start;
-    char* str = (char*)malloc(len + 1);
-    strncpy(str, p->json + start, len);
-    str[len] = 0;
-    
-    p->pos++; // Skip closing quote
-    
-    Value* val = (Value*)malloc(sizeof(Value));
-    val->type = 3;
-    val->str_val = str;
-    return val;
-}
-
-Value* parse_number(Parser* p) {
-    int start = p->pos;
-    while (p->pos < p->len && (isdigit(p->json[p->pos]) || p->json[p->pos] == '.' || 
-           p->json[p->pos] == 'e' || p->json[p->pos] == 'E' || p->json[p->pos] == '-' || 
-           p->json[p->pos] == '+')) {
-        p->pos++;
-    }
-    
-    int len = p->pos - start;
-    char* num_str = (char*)malloc(len + 1);
-    strncpy(num_str, p->json + start, len);
-    num_str[len] = 0;
-    
-    double num = strtod(num_str, NULL);
-    free(num_str);
-    
-    Value* val = (Value*)malloc(sizeof(Value));
-    val->type = 2;
-    val->num_val = num;
-    return val;
-}
-
-Value* parse_object(Parser* p) {
-    if (next(p) != '{') return NULL;
-    
-    Object* obj = (Object*)malloc(sizeof(Object));
-    obj->count = 0;
-    obj->capacity = 8;
-    obj->keys = (char**)malloc(obj->capacity * sizeof(char*));
-    obj->values = (Value**)malloc(obj->capacity * sizeof(Value*));
     
     while (1) {
-        char c = peek(p);
-        if (c == '}') {
-            p->pos++;
-            break;
-        }
-        
-        Value* key = parse_string(p);
+        skip_spaces(s);
+        char *key = parse_string(s);
         if (!key) break;
         
-        if (next(p) != ':') break;
-        
-        Value* val = parse_value(p);
-        
-        obj->keys[obj->count] = key->str_val;
-        obj->values[obj->count] = val;
-        obj->count++;
-        free(key);
-        
-        c = peek(p);
-        if (c == ',') {
-            p->pos++;
-        } else if (c == '}') {
-            continue;
-        } else {
+        skip_spaces(s);
+        if (**s != ':') {
+            free(key);
             break;
+        }
+        (*s)++;
+        
+        JsonValue *value = parse_value(s);
+        if (!value) {
+            free(key);
+            break;
+        }
+        
+        val->object.count++;
+        val->object.keys = realloc(val->object.keys, val->object.count * sizeof(char*));
+        val->object.values = realloc(val->object.values, val->object.count * sizeof(JsonValue*));
+        val->object.keys[val->object.count - 1] = key;
+        val->object.values[val->object.count - 1] = value;
+        
+        skip_spaces(s);
+        if (**s == '}') {
+            (*s)++;
+            break;
+        }
+        if (**s == ',') {
+            (*s)++;
         }
     }
     
-    Value* val = (Value*)malloc(sizeof(Value));
-    val->type = 4;
-    val->obj_val = obj;
     return val;
 }
 
-Value* parse_array(Parser* p) {
-    if (next(p) != '[') return NULL;
+JsonValue *parse_array(char **s) {
+    skip_spaces(s);
+    if (**s != '[') return NULL;
+    (*s)++;
     
-    Array* arr = (Array*)malloc(sizeof(Array));
-    arr->count = 0;
-    arr->capacity = 8;
-    arr->items = (Value**)malloc(arr->capacity * sizeof(Value*));
+    JsonValue *val = malloc(sizeof(JsonValue));
+    val->type = JSON_ARRAY;
+    val->array.items = NULL;
+    val->array.count = 0;
+    
+    skip_spaces(s);
+    if (**s == ']') {
+        (*s)++;
+        return val;
+    }
     
     while (1) {
-        char c = peek(p);
-        if (c == ']') {
-            p->pos++;
+        skip_spaces(s);
+        JsonValue *item = parse_value(s);
+        if (!item) break;
+        
+        val->array.count++;
+        val->array.items = realloc(val->array.items, val->array.count * sizeof(JsonValue*));
+        val->array.items[val->array.count - 1] = item;
+        
+        skip_spaces(s);
+        if (**s == ']') {
+            (*s)++;
             break;
         }
-        
-        Value* item = parse_value(p);
-        arr->items[arr->count++] = item;
-        
-        c = peek(p);
-        if (c == ',') {
-            p->pos++;
-        } else if (c == ']') {
-            continue;
-        } else {
-            break;
+        if (**s == ',') {
+            (*s)++;
         }
     }
     
-    Value* val = (Value*)malloc(sizeof(Value));
-    val->type = 5;
-    val->arr_val = arr;
     return val;
 }
 
-Value* parse_value(Parser* p) {
-    char c = peek(p);
-    if (c == '{') return parse_object(p);
-    if (c == '[') return parse_array(p);
-    if (c == '"') return parse_string(p);
-    if (c == '-' || isdigit(c)) return parse_number(p);
+JsonValue *parse_number(char **s) {
+    JsonValue *val = malloc(sizeof(JsonValue));
+    val->type = JSON_NUMBER;
+    char *start = *s;
+    if (**s == '-') (*s)++;
+    while (isdigit((unsigned char)**s)) (*s)++;
+    int len = *s - start;
+    val->number = malloc(len + 1);
+    memcpy(val->number, start, len);
+    val->number[len] = '\0';
+    return val;
+}
+
+JsonValue *parse_value(char **s) {
+    skip_spaces(s);
+    if (!**s) return NULL;
     
-    if (c == 't' || c == 'f') {
-        if (strncmp(p->json + p->pos, "true", 4) == 0) {
-            p->pos += 4;
-            Value* val = (Value*)malloc(sizeof(Value));
-            val->type = 1;
-            val->bool_val = 1;
-            return val;
-        } else if (strncmp(p->json + p->pos, "false", 5) == 0) {
-            p->pos += 5;
-            Value* val = (Value*)malloc(sizeof(Value));
-            val->type = 1;
-            val->bool_val = 0;
-            return val;
-        }
+    if (**s == '{') return parse_object(s);
+    if (**s == '[') return parse_array(s);
+    if (**s == '"') {
+        JsonValue *val = malloc(sizeof(JsonValue));
+        val->type = JSON_STRING;
+        val->string = parse_string(s);
+        return val;
     }
-    
-    if (c == 'n') {
-        if (strncmp(p->json + p->pos, "null", 4) == 0) {
-            p->pos += 4;
-            Value* val = (Value*)malloc(sizeof(Value));
-            val->type = 0;
-            return val;
-        }
+    if (strncmp(*s, "true", 4) == 0 && !isalnum((*s)[4])) {
+        JsonValue *val = malloc(sizeof(JsonValue));
+        val->type = JSON_BOOLEAN;
+        val->boolean = 1;
+        *s += 4;
+        return val;
+    }
+    if (strncmp(*s, "false", 5) == 0 && !isalnum((*s)[5])) {
+        JsonValue *val = malloc(sizeof(JsonValue));
+        val->type = JSON_BOOLEAN;
+        val->boolean = 0;
+        *s += 5;
+        return val;
+    }
+    if (strncmp(*s, "null", 4) == 0 && !isalnum((*s)[4])) {
+        JsonValue *val = malloc(sizeof(JsonValue));
+        val->type = JSON_NULL;
+        *s += 4;
+        return val;
+    }
+    if (**s == '-' || isdigit((unsigned char)**s)) {
+        return parse_number(s);
     }
     
     return NULL;
 }
 
-void process_queries(Value* root) {
-    int k;
-    scanf("%d", &k);
-    
-    Value* current = root;
+JsonValue *find_path(JsonValue *root, char **path, int k) {
+    JsonValue *cur = root;
     
     for (int i = 0; i < k; i++) {
-        char path[100];
-        scanf("%s", path);
+        if (!cur) return NULL;
         
-        if (current->type == 4) { // object
-            for (int j = 0; j < current->obj_val->count; j++) {
-                if (strcmp(current->obj_val->keys[j], path) == 0) {
-                    current = current->obj_val->values[j];
+        if (path[i][0] == '[') {
+            if (cur->type != JSON_ARRAY) return NULL;
+            int idx = atoi(path[i] + 1);
+            if (idx < 0 || idx >= cur->array.count) return NULL;
+            cur = cur->array.items[idx];
+        } else {
+            if (cur->type != JSON_OBJECT) return NULL;
+            int found = -1;
+            for (int j = 0; j < cur->object.count; j++) {
+                if (strcmp(cur->object.keys[j], path[i]) == 0) {
+                    found = j;
                     break;
                 }
             }
-        } else if (current->type == 5) { // array
-            int idx = atoi(path + 1); // Skip '['
-            current = current->arr_val->items[idx];
+            if (found == -1) return NULL;
+            cur = cur->object.values[found];
         }
     }
     
-    switch (current->type) {
-        case 0: printf("null\n"); break;
-        case 1: printf("%s\n", current->bool_val ? "true" : "false"); break;
-        case 2: printf("%g\n", current->num_val); break;
-        case 3: printf("\"%s\"\n", current->str_val); break;
-        case 4: printf("<object>\n"); break;
-        case 5: printf("<array>\n"); break;
+    return cur;
+}
+
+void print_value(JsonValue *val) {
+    if (!val) {
+        printf("null\n");
+        return;
+    }
+    
+    switch (val->type) {
+        case JSON_OBJECT:
+            printf("<object>\n");
+            break;
+        case JSON_ARRAY:
+            printf("<array>\n");
+            break;
+        case JSON_STRING:
+            printf("%s\n", val->string);
+            break;
+        case JSON_NUMBER:
+            printf("%s\n", val->number);
+            break;
+        case JSON_BOOLEAN:
+            printf("%s\n", val->boolean ? "true" : "false");
+            break;
+        case JSON_NULL:
+            printf("null\n");
+            break;
     }
 }
 
+void free_json(JsonValue *val) {
+    if (!val) return;
+    
+    switch (val->type) {
+        case JSON_OBJECT:
+            for (int i = 0; i < val->object.count; i++) {
+                free(val->object.keys[i]);
+                free_json(val->object.values[i]);
+            }
+            free(val->object.keys);
+            free(val->object.values);
+            break;
+        case JSON_ARRAY:
+            for (int i = 0; i < val->array.count; i++) {
+                free_json(val->array.items[i]);
+            }
+            free(val->array.items);
+            break;
+        case JSON_STRING:
+            free(val->string);
+            break;
+        case JSON_NUMBER:
+            free(val->number);
+            break;
+        default:
+            break;
+    }
+    free(val);
+}
+
 int main() {
-    FILE* fin = fopen("input.txt", "r");
-    fseek(fin, 0, SEEK_END);
-    long size = ftell(fin);
-    fseek(fin, 0, SEEK_SET);
+    char buffer[2000000];
+    int pos = 0;
+    int c;
     
-    char* json = (char*)malloc(size + 1);
-    fread(json, 1, size, fin);
-    json[size] = 0;
+    while ((c = getchar()) != EOF) {
+        buffer[pos++] = c;
+    }
+    buffer[pos] = '\0';
     
-    Parser parser;
-    parser.json = json;
-    parser.pos = 0;
-    parser.len = size;
-    
-    Value* root = parse_value(&parser);
-    
-    char separator[10];
-    while (fgets(separator, sizeof(separator), fin) && separator[0] != '<') {}
+    char *ptr = buffer;
+    JsonValue *root = parse_value(&ptr);
     
     int k;
-    while (fscanf(fin, "%d", &k) == 1 && k != -1) {
-        fseek(fin, 1, SEEK_CUR); // Skip newline
-        
-        Value* current = root;
-        
+    while (scanf("%d", &k) == 1 && k != -1) {
+        char **path = malloc(k * sizeof(char*));
         for (int i = 0; i < k; i++) {
-            char path[100];
-            fgets(path, sizeof(path), fin);
-            path[strcspn(path, "\n")] = 0;
-            
-            if (current->type == 4) { // object
-                for (int j = 0; j < current->obj_val->count; j++) {
-                    if (strcmp(current->obj_val->keys[j], path) == 0) {
-                        current = current->obj_val->values[j];
-                        break;
-                    }
-                }
-            } else if (current->type == 5) { // array
-                int idx = atoi(path + 1);
-                current = current->arr_val->items[idx];
-            }
+            char buf[1000];
+            scanf("%s", buf);
+            path[i] = strdup(buf);
         }
         
-        switch (current->type) {
-            case 0: printf("null\n"); break;
-            case 1: printf("%s\n", current->bool_val ? "true" : "false"); break;
-            case 2: printf("%g\n", current->num_val); break;
-            case 3: printf("\"%s\"\n", current->str_val); break;
-            case 4: printf("<object>\n"); break;
-            case 5: printf("<array>\n"); break;
-        }
+        JsonValue *found = find_path(root, path, k);
+        print_value(found);
+        
+        for (int i = 0; i < k; i++) free(path[i]);
+        free(path);
     }
     
-    fclose(fin);
-    free(json);
+    free_json(root);
     
     return 0;
 }
