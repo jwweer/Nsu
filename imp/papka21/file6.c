@@ -1,17 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define MAXQ 500005
 
-typedef struct {
-    int value;
-    int prev;
-} Node;
-
-Node nodes[MAXQ];
-int top[MAXQ];
-int node_cnt;
-int version;
+int stack[MAXQ];
+int prev_idx[MAXQ];
+int version_top[MAXQ];
+int cur_version;
+int cur_node;
 
 int main() {
     freopen("input.txt", "r", stdin);
@@ -20,43 +17,48 @@ int main() {
     int Q;
     scanf("%d", &Q);
     
-    top[0] = -1;
-    node_cnt = 0;
-    version = 0;
+    cur_version = 0;
+    cur_node = 0;
+    version_top[0] = -1;
     
     for (int i = 0; i < Q; i++) {
-        char op[2];
+        char op[3];
         scanf("%s", op);
         
         if (op[0] == '+') {
             int x;
             scanf("%d", &x);
             
-            node_cnt++;
-            nodes[node_cnt].value = x;
-            nodes[node_cnt].prev = top[version];
+            cur_node++;
+            stack[cur_node] = x;
+            prev_idx[cur_node] = version_top[cur_version];
             
-            version++;
-            top[version] = node_cnt;
+            cur_version++;
+            version_top[cur_version] = cur_node;
         }
         else if (op[0] == '-') {
-            version++;
-            top[version] = nodes[top[version - 1]].prev;
+            cur_version++;
+            version_top[cur_version] = prev_idx[version_top[cur_version - 1]];
         }
         else if (op[0] == '?') {
             int v;
             scanf("%d", &v);
             
-            if (top[v] == -1) {
+            if (version_top[v] == -1) {
                 printf("-\n");
-            } else {
-                int cur = top[v];
-                while (cur != -1) {
-                    printf("%d ", nodes[cur].value);
-                    cur = nodes[cur].prev;
-                }
-                printf("\n");
+                continue;
             }
+            
+            int current = version_top[v];
+            int first = 1;
+            
+            while (current != -1) {
+                if (!first) printf(" ");
+                printf("%d", stack[current]);
+                first = 0;
+                current = prev_idx[current];
+            }
+            printf("\n");
         }
     }
     
