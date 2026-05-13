@@ -3,62 +3,62 @@
 
 #define MAXQ 500005
 
-typedef struct Node {
+typedef struct {
     int value;
     int prev;
 } Node;
 
-Node stack[MAXQ];
+Node nodes[MAXQ];
 int top[MAXQ];
-int version_cnt = 0;
-
-void push(int x) {
-    version_cnt++;
-    stack[version_cnt].value = x;
-    stack[version_cnt].prev = top[version_cnt - 1];
-    top[version_cnt] = version_cnt;
-}
-
-void pop() {
-    version_cnt++;
-    top[version_cnt] = stack[top[version_cnt - 1]].prev;
-}
-
-void query(int v) {
-    if (top[v] == -1) {
-        printf("-\n");
-        return;
-    }
-    int cur = top[v];
-    while (cur != -1) {
-        printf("%d ", stack[cur].value);
-        cur = stack[cur].prev;
-    }
-    printf("\n");
-}
+int node_cnt;
+int version;
 
 int main() {
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
+    
     int Q;
     scanf("%d", &Q);
-
+    
     top[0] = -1;
-    version_cnt = 0;
-
+    node_cnt = 0;
+    version = 0;
+    
     for (int i = 0; i < Q; i++) {
         char op[2];
         scanf("%s", op);
+        
         if (op[0] == '+') {
             int x;
             scanf("%d", &x);
-            push(x);
-        } else if (op[0] == '-') {
-            pop();
-        } else if (op[0] == '?') {
+            
+            node_cnt++;
+            nodes[node_cnt].value = x;
+            nodes[node_cnt].prev = top[version];
+            
+            version++;
+            top[version] = node_cnt;
+        }
+        else if (op[0] == '-') {
+            version++;
+            top[version] = nodes[top[version - 1]].prev;
+        }
+        else if (op[0] == '?') {
             int v;
             scanf("%d", &v);
-            query(v);
+            
+            if (top[v] == -1) {
+                printf("-\n");
+            } else {
+                int cur = top[v];
+                while (cur != -1) {
+                    printf("%d ", nodes[cur].value);
+                    cur = nodes[cur].prev;
+                }
+                printf("\n");
+            }
         }
     }
-
+    
     return 0;
 }

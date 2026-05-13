@@ -1,142 +1,170 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <limits.h>
+#include <string.h>
+
+typedef long long ll;
 
 #define MAXN 160005
 #define MAXM 2000000
 
-typedef struct Edge {
+typedef struct {
     int to, rev;
-    long long cap, flow;
-    struct Edge *next;
+    ll cap;
 } Edge;
 
-Edge *graph[MAXN];
-int level[MAXN], iter[MAXN];
-int h, w, total_nodes, src, sink;
+Edge edges[MAXM];
+int edge_count = 0;
+int first_edge[MAXN], next_edge[MAXM];
 
-void add_edge(int from, int to, long long cap) {
-    Edge *e1 = malloc(sizeof(Edge));
-    Edge *e2 = malloc(sizeof(Edge));
+int level[MAXN], queue[MAXN], ptr[MAXN];
+int rows, cols, total_nodes, source, sink;
+
+void add_directed(int from, int to, ll cap) {
+    edges[edge_count] = (Edge){to, edge_count + 1, cap};
+    next_edge[edge_count] = first_edge[from];
+    first_edge[from] = edge_count++;
     
-    e1->to = to; e1->cap = cap; e1->flow = 0; e1->rev = 0; e1->next = graph[from];
-    e2->to = from; e2->cap = 0; e2->flow = 0; e2->rev = 0; e2->next = graph[to];
-    
-    graph[from] = e1;
-    graph[to] = e2;
-    
-    e1->rev = 1;
-    e2->rev = 0;
+    edges[edge_count] = (Edge){from, edge_count - 1, 0};
+    next_edge[edge_count] = first_edge[to];
+    first_edge[to] = edge_count++;
 }
 
-void bfs(int s) {
+void add_undirected(int u, int v, ll w) {
+    add_directed(u, v, w);
+    add_directed(v, u, w);
+}
+
+int bfs() {
     memset(level, -1, total_nodes * sizeof(int));
-    int q[MAXN], front = 0, rear = 0;
-    level[s] = 0;
-    q[rear++] = s;
+    int head = 0, tail = 0;
+    queue[tail++] = source;
+    level[source] = 0;
     
-    while (front < rear) {
-        int v = q[front++];
-        for (Edge *e = graph[v]; e; e = e->next) {
-            if (e->cap > e->flow && level[e->to] < 0) {
-                level[e->to] = level[v] + 1;
-                q[rear++] = e->to;
+    while (head < tail) {
+        int v = queue[head++];
+        for (int e = first_edge[v]; e != -1; e = next_edge[e]) {
+            if (edges[e].cap > 0 && level[edges[e].to] == -1) {
+                level[edges[e].to] = level[v] + 1;
+                queue[tail++] = edges[e].to;
             }
         }
     }
+    return level[sink] != -1;
 }
 
-long long dfs(int v, int t, long long f) {
-    if (v == t) return f;
-    for (Edge *e = graph[v]; e; e = e->next) {
-        if (e->cap > e->flow && level[v] < level[e->to]) {
-            long long d = dfs(e->to, t, f < e->cap - e->flow ? f : e->cap - e->flow);
-            if (d > 0) {
-                e->flow += d;
-                Edge *rev = graph[e->to];
-                for (int i = 0; i < e->rev; i++) rev = rev->next;
-                rev->flow -= d;
-                return d;
+ll dfs(int v, ll flow) {
+    if (v == sink) return flow;
+    for (int *p = &ptr[v]; *p != -1; *p = next_edge[*p]) {
+        int e = *p;
+        if (edges[e].cap > 0 && level[edges[e].to] == level[v] + 1) {
+            ll pushed = dfs(edges[e].to, flow < edges[e].cap ? flow : edges[e].cap);
+            if (pushed) {
+                edges[e].cap -= pushed;
+                edges[edges[e].rev].cap += pushed;
+                return pushed;
             }
         }
     }
     return 0;
 }
 
-long long max_flow() {
-    long long flow = 0;
-    while (1) {
-        bfs(src);
-        if (level[sink] < 0) return flow;
-        memset(iter, 0, total_nodes * sizeof(int));
-        long long f;
-        while ((f = dfs(src, sink, LLONG_MAX)) > 0) {
-            flow += f;
+ll max_flow() {
+    ll flow = 0;
+    while (bfs()) {
+        for (int i = 0; i < total_nodes; i++) ptr[i] = first_edge[i];
+        while (1) {
+            ll pushed = dfs(source, 1LL << 60);
+            if (!pushed) break;
+            flow += pushed;
         }
     }
+    return flow;
 }
 
 int pixel_id(int r, int c) {
-    return (r-1)*w + c + 2;
+    return r * cols + c;
 }
 
 int main() {
-    scanf("%d %d", &h, &w);
-    total_nodes = h * w + 2;
-    src = 0; sink = 1;
+    freopen("input.txt", "r", stdin);
+    freopen("output.txt", "w", stdout);
     
-    for (int i = 0; i < total_nodes; i++) graph[i] = NULL;
+    memset(first_edge, -1, sizeof(first_edge));
     
-    long long sum_b = 0;
+    scanf("%d %d", &rows, &cols);
+    int cells = rows * cols;
+    source = cells;
+    sink = cells + 1;
+    total_nodes = cells + 2;
     
-    for (int r = 1; r <= h; r++) {
-        for (int c = 1; c <= w; c++) {
-            long long a, b;
-            scanf("%lld %lld", &a, &b);
-            int id = pixel_id(r, c);
-            add_edge(src, id, a);
-            add_edge(id, sink, b);
-            sum_b += b;
+    ll A[400][400], B[400][400];
+    
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            scanf("%lld %lld", &A[i][j], &B[i][j]);
+        }
+    }
+    
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            int id = pixel_id(i, j);
+            if ((i + j) % 2 == 0) {
+                add_directed(source, id, A[i][j]);
+                add_directed(id, sink, B[i][j]);
+            } else {
+                add_directed(source, id, B[i][j]);
+                add_directed(id, sink, A[i][j]);
+            }
         }
     }
     
     int m;
     scanf("%d", &m);
-    for (int i = 0; i < m; i++) {
+    
+    ll total_bonus = 0;
+    
+    for (int k = 0; k < m; k++) {
         int r1, c1, r2, c2;
-        long long p;
+        ll p;
         scanf("%d %d %d %d %lld", &r1, &c1, &r2, &c2, &p);
-        int id1 = pixel_id(r1, c1);
-        int id2 = pixel_id(r2, c2);
-        add_edge(id1, id2, p);
-        add_edge(id2, id1, p);
+        r1--; c1--; r2--; c2--;
+        int u = pixel_id(r1, c1);
+        int v = pixel_id(r2, c2);
+        add_undirected(u, v, p);
+        total_bonus += p;
     }
     
-    long long min_cut = max_flow();
-    long long min_energy = sum_b - min_cut;
+    ll mincut = max_flow();
+    ll answer = mincut - total_bonus;
     
-    printf("%lld\n", min_energy);
+    printf("%lld\n", answer);
     
     int reachable[MAXN] = {0};
     int q[MAXN], front = 0, rear = 0;
-    q[rear++] = src;
-    reachable[src] = 1;
+    q[rear++] = source;
+    reachable[source] = 1;
     
     while (front < rear) {
         int v = q[front++];
-        for (Edge *e = graph[v]; e; e = e->next) {
-            if (e->cap > e->flow && !reachable[e->to]) {
-                reachable[e->to] = 1;
-                q[rear++] = e->to;
+        for (int e = first_edge[v]; e != -1; e = next_edge[e]) {
+            if (edges[e].cap > 0 && !reachable[edges[e].to]) {
+                reachable[edges[e].to] = 1;
+                q[rear++] = edges[e].to;
             }
         }
     }
     
-    for (int r = 1; r <= h; r++) {
-        for (int c = 1; c <= w; c++) {
-            int id = pixel_id(r, c);
-            printf("%d", reachable[id] ? 0 : 1);
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            int id = pixel_id(i, j);
+            int is_reachable = reachable[id];
+            int label;
+            if ((i + j) % 2 == 0) {
+                label = is_reachable ? 1 : 0;
+            } else {
+                label = is_reachable ? 0 : 1;
+            }
+            printf("%d", label);
         }
         printf("\n");
     }
