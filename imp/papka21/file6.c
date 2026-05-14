@@ -1,14 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
 #define MAXQ 500005
 
-int stack[MAXQ];
-int prev_idx[MAXQ];
-int version_top[MAXQ];
-int cur_version;
-int cur_node;
+typedef struct {
+    int value;
+    int prev;
+} Node;
 
 int main() {
     freopen("input.txt", "r", stdin);
@@ -17,50 +15,51 @@ int main() {
     int Q;
     scanf("%d", &Q);
     
-    cur_version = 0;
-    cur_node = 0;
-    version_top[0] = -1;
+    Node* versions = (Node*)malloc((Q + 1) * sizeof(Node));
+    versions[0].prev = -1;
+    versions[0].value = 0;
     
-    for (int i = 0; i < Q; i++) {
-        char op[3];
-        scanf("%s", op);
+    int current = 0;
+    
+    for (int i = 1; i <= Q; i++) {
+        char op;
+        scanf(" %c", &op);
         
-        if (op[0] == '+') {
+        if (op == '+') {
             int x;
             scanf("%d", &x);
-            
-            cur_node++;
-            stack[cur_node] = x;
-            prev_idx[cur_node] = version_top[cur_version];
-            
-            cur_version++;
-            version_top[cur_version] = cur_node;
+            versions[i].value = x;
+            versions[i].prev = current;
+            current = i;
         }
-        else if (op[0] == '-') {
-            cur_version++;
-            version_top[cur_version] = prev_idx[version_top[cur_version - 1]];
+        else if (op == '-') {
+            versions[i].prev = versions[current].prev;
+            current = i;
         }
-        else if (op[0] == '?') {
+        else if (op == '?') {
             int v;
             scanf("%d", &v);
             
-            if (version_top[v] == -1) {
+            if (versions[v].prev == -1) {
                 printf("-\n");
-                continue;
+            } else {
+                int* arr = (int*)malloc(MAXQ * sizeof(int));
+                int cnt = 0;
+                int cur = v;
+                while (cur != -1 && versions[cur].prev != -1) {
+                    arr[cnt++] = versions[cur].value;
+                    cur = versions[cur].prev;
+                }
+                for (int j = 0; j < cnt; j++) {
+                    if (j > 0) printf(" ");
+                    printf("%d", arr[j]);
+                }
+                printf("\n");
+                free(arr);
             }
-            
-            int current = version_top[v];
-            int first = 1;
-            
-            while (current != -1) {
-                if (!first) printf(" ");
-                printf("%d", stack[current]);
-                first = 0;
-                current = prev_idx[current];
-            }
-            printf("\n");
         }
     }
     
+    free(versions);
     return 0;
 }
