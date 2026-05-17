@@ -60,7 +60,7 @@ int main() {
         }
         flow += path_flow;
     }
-
+    // нахождение множества достижимых вершин из S в остаточной сети
     int reach[MAXN] = {0};
     int q[MAXN], front = 0, rear = 0;
     q[rear++] = S;
