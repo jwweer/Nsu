@@ -1,0 +1,51 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\geometry{top=2cm, bottom=2cm, left=2cm, right=2cm}
+
+\begin{document}
+
+\textbf{Solution.}
+
+Forward pass:
+\[
+h_1 = \sigma(x_1) = \frac{1}{1+e^{-x_1}}, \quad
+h_2 = \sigma(x_2) = \frac{1}{1+e^{-x_2}}
+\]
+\[
+o_{\min} = \min(h_1, h_2), \quad o_{\max} = \max(h_1, h_2)
+\]
+\[
+y = o_{\min} + o_{\max}
+\]
+
+Backpropagation:
+\[
+\frac{\partial E}{\partial x_i} = \frac{\partial E}{\partial y} \cdot \frac{\partial y}{\partial h_i} \cdot \frac{\partial h_i}{\partial x_i}, \quad i=1,2
+\]
+
+Sigmoid derivative:
+\[
+\frac{\partial h_i}{\partial x_i} = \sigma(x_i)(1 - \sigma(x_i))
+\]
+
+Since \(\min(h_1,h_2) + \max(h_1,h_2) = h_1 + h_2\), we have \(y = h_1 + h_2\), thus:
+\[
+\frac{\partial y}{\partial h_1} = 1, \quad \frac{\partial y}{\partial h_2} = 1
+\]
+
+Therefore:
+\[
+\frac{\partial E}{\partial x_1} = \frac{\partial E}{\partial y} \cdot \sigma(x_1)(1 - \sigma(x_1))
+\]
+\[
+\frac{\partial E}{\partial x_2} = \frac{\partial E}{\partial y} \cdot \sigma(x_2)(1 - \sigma(x_2))
+\]
+
+\textbf{Answer:}
+\[
+\boxed{\frac{\partial E}{\partial x_1} = \frac{\partial E}{\partial y} \cdot \sigma(x_1)\bigl(1 - \sigma(x_1)\bigr)}, \qquad
+\boxed{\frac{\partial E}{\partial x_2} = \frac{\partial E}{\partial y} \cdot \sigma(x_2)\bigl(1 - \sigma(x_2)\bigr)}
+\]
+
+\end{document}

@@ -1,158 +1,107 @@
 #include "vector.h"
 #include <stdlib.h>
-#include <string.h>
-#include <stdio.h>
 
-struct vector {
-    int* data;
-    size_t size;
-    size_t capacity;
+#define DEFAULT_CAP 4
+
+struct vector_t {
+    int* arr;
+    size_t len;
+    size_t cap;
 };
 
-#define VECTOR_INIT_CAPACITY 4
-
-vector_t* vector_create(size_t capacity) {
-    if (capacity == 0) {
-        capacity = VECTOR_INIT_CAPACITY;
-    }
+static void expand_if_full(struct vector_t* v, size_t need) {
+    if (need <= v->cap) return;
     
-    vector_t* vec = (vector_t*)malloc(sizeof(vector_t));
-    if (!vec) {
-        return NULL;
-    }
+    size_t new_cap = v->cap;
+    if (new_cap < DEFAULT_CAP) new_cap = DEFAULT_CAP;
+    while (new_cap < need) new_cap <<= 1;
     
-    vec->data = (int*)malloc(sizeof(int) * capacity);
-    if (!vec->data) {
-        free(vec);
-        return NULL;
+    int* new_arr = (int*)realloc(v->arr, new_cap * sizeof(int));
+    if (new_arr) {
+        v->arr = new_arr;
+        v->cap = new_cap;
     }
-    
-    vec->size = 0;
-    vec->capacity = capacity;
-    return vec;
 }
 
-void vector_destroy(vector_t* vec) {
-    if (!vec) {
-        return;
-    }
-    if (vec->data) {
-        free(vec->data);
-    }
-    free(vec);
+vector_t* vector_create(void) {
+    struct vector_t* v = (struct vector_t*)malloc(sizeof(struct vector_t));
+    if (!v) return NULL;
+    v->arr = NULL;
+    v->len = 0;
+    v->cap = 0;
+    return v;
 }
 
-static bool vector_ensure_capacity(vector_t* vec, size_t needed) {
-    if (vec->capacity >= needed) {
-        return true;
+void vector_destroy(vector_t* v) {
+    if (v) {
+        free(v->arr);
+        free(v);
     }
-    
-    size_t new_capacity = vec->capacity * 2;
-    if (new_capacity < needed) {
-        new_capacity = needed;
-    }
-    
-    int* new_data = (int*)realloc(vec->data, sizeof(int) * new_capacity);
-    if (!new_data) {
-        return false;
-    }
-    
-    vec->data = new_data;
-    vec->capacity = new_capacity;
-    return true;
 }
 
-bool vector_push_back(vector_t* vec, int value) {
-    if (!vec) {
-        return false;
-    }
-    
-    if (!vector_ensure_capacity(vec, vec->size + 1)) {
-        return false;
-    }
-    
-    vec->data[vec->size++] = value;
-    return true;
+void vector_push_back(vector_t* v, int val) {
+    if (!v) return;
+    expand_if_full(v, v->len + 1);
+    v->arr[v->len++] = val;
 }
 
-bool vector_pop_back(vector_t* vec) {
-    if (!vec || vec->size == 0) {
-        return false;
-    }
-    
-    vec->size--;
-    return true;
+void vector_pop_back(vector_t* v) {
+    if (v && v->len) v->len--;
 }
 
-int* vector_at(vector_t* vec, size_t index) {
-    if (!vec || index >= vec->size) {
-        return NULL;
-    }
-    return &vec->data[index];
+size_t vector_size(const vector_t* v) {
+    return v ? v->len : 0;
 }
 
-int vector_front(vector_t* vec) {
-    if (!vec || vec->size == 0) {
-        return 0;
-    }
-    return vec->data[0];
+size_t vector_capacity(const vector_t* v) {
+    return v ? v->cap : 0;
 }
 
-int vector_back(vector_t* vec) {
-    if (!vec || vec->size == 0) {
-        return 0;
-    }
-    return vec->data[vec->size - 1];
+bool vector_at(const vector_t* v, size_t idx, int* out) {
+    if (!v || idx >= v->len) return 0;
+    if (out) *out = v->arr[idx];
+    return 1;
 }
 
-size_t vector_size(const vector_t* vec) {
-    return vec ? vec->size : 0;
+bool vector_front(const vector_t* v, int* out) {
+    if (!v || !v->len) return 0;
+    if (out) *out = v->arr[0];
+    return 1;
 }
 
-size_t vector_capacity(const vector_t* vec) {
-    return vec ? vec->capacity : 0;
+bool vector_back(const vector_t* v, int* out) {
+    if (!v || !v->len) return 0;
+    if (out) *out = v->arr[v->len - 1];
+    return 1;
 }
 
-void vector_resize(vector_t* vec, size_t new_size, int default_value) {
-    if (!vec) {
-        return;
+void vector_resize(vector_t* v, size_t new_len, int fill) {
+    if (!v) return;
+    if (new_len > v->len) {
+        expand_if_full(v, new_len);
+        for (size_t i = v->len; i < new_len; ++i)
+            v->arr[i] = fill;
     }
-    
-    if (new_size > vec->size) {
-        if (!vector_ensure_capacity(vec, new_size)) {
-            return;
-        }
-        for (size_t i = vec->size; i < new_size; i++) {
-            vec->data[i] = default_value;
-        }
-    }
-    
-    vec->size = new_size;
+    v->len = new_len;
 }
 
-void vector_clear(vector_t* vec) {
-    if (!vec) {
-        return;
-    }
-    vec->size = 0;
+void vector_clear(vector_t* v) {
+    if (v) v->len = 0;
 }
 
-bool vector_empty(const vector_t* vec) {
-    return vec ? (vec->size == 0) : true;
+bool vector_empty(const vector_t* v) {
+    return v ? v->len == 0 : 1;
 }
 
-void vector_print(const vector_t* vec) {
-    if (!vec || vec->size == 0) {
-        printf("[]");
-        return;
+const int* vector_data(const vector_t* v) {
+    return v ? v->arr : NULL;
+}
+
+void vector_reserve(vector_t* v, size_t new_cap) {
+    if (!v || new_cap <= v->cap) return;
+    int* new_arr = (int*)realloc(v->arr, new_cap * sizeof(int));
+    if (new_arr) {
+        v->arr = new_arr;
+        v->cap = new_cap;
     }
-    
-    printf("[");
-    for (size_t i = 0; i < vec->size; i++) {
-        if (i > 0) {
-            printf(", ");
-        }
-        printf("%d", vec->data[i]);
-    }
-    printf("]");
 }
