@@ -1,0 +1,14 @@
+services:
+  postgres:
+    container_name: postgres-with-logs
+    image: postgres:12.9
+    command: ["postgres", "-c", "log_statement=all"]
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    restart: always
