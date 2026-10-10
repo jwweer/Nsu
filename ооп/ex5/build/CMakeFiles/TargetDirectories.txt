@@ -1,0 +1,5 @@
+/Users/ksenia/Documents/GitHub/Nsu/ооп/ex5/build/CMakeFiles/exec_trg.dir
+/Users/ksenia/Documents/GitHub/Nsu/ооп/ex5/build/CMakeFiles/edit_cache.dir
+/Users/ksenia/Documents/GitHub/Nsu/ооп/ex5/build/CMakeFiles/rebuild_cache.dir
+/Users/ksenia/Documents/GitHub/Nsu/ооп/ex5/build/my_lib/CMakeFiles/edit_cache.dir
+/Users/ksenia/Documents/GitHub/Nsu/ооп/ex5/build/my_lib/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,8 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/ksenia/Documents/GitHub/Nsu/\u043e\u043e\u043f/ex5/build/cmake_install.cmake",
+		"/Users/ksenia/Documents/GitHub/Nsu/\u043e\u043e\u043f/ex5/build/my_lib/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

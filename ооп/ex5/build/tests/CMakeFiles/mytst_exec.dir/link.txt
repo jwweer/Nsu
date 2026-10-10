@@ -1,0 +1,1 @@
+/usr/bin/c++  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/mytst_exec.dir/my_test.cpp.o -o mytst_exec  ../lib/libgtest_main.a ../lib/libgtest.a

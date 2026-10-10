@@ -1,0 +1,38 @@
+{
+  "tests": 4,
+  "name": "AllTests",
+  "testsuites": [
+    {
+      "name": "HypotenuseSuite",
+      "tests": 3,
+      "testsuite": [
+        {
+          "name": "TestNormal",
+          "file": "\/Users\/ksenia\/Documents\/GitHub\/Nsu\/\u00D0\u00BE\u00D0\u00BE\u00D0\u00BF\/ex5\/tests\/my_test.cpp",
+          "line": 5
+        },
+        {
+          "name": "TestZero",
+          "file": "\/Users\/ksenia\/Documents\/GitHub\/Nsu\/\u00D0\u00BE\u00D0\u00BE\u00D0\u00BF\/ex5\/tests\/my_test.cpp",
+          "line": 10
+        },
+        {
+          "name": "AssertVsExpect",
+          "file": "\/Users\/ksenia\/Documents\/GitHub\/Nsu\/\u00D0\u00BE\u00D0\u00BE\u00D0\u00BF\/ex5\/tests\/my_test.cpp",
+          "line": 15
+        }
+      ]
+    },
+    {
+      "name": "HypotenuseRandSuite",
+      "tests": 1,
+      "testsuite": [
+        {
+          "name": "TestRange",
+          "file": "\/Users\/ksenia\/Documents\/GitHub\/Nsu\/\u00D0\u00BE\u00D0\u00BE\u00D0\u00BF\/ex5\/tests\/my_test.cpp",
+          "line": 25
+        }
+      ]
+    }
+  ]
+}

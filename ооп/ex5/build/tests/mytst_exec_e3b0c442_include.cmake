@@ -1,0 +1,5 @@
+if(EXISTS "/Users/ksenia/Documents/GitHub/Nsu/ооп/ex5/build/tests/mytst_exec_e3b0c442_tests.cmake")
+  include("/Users/ksenia/Documents/GitHub/Nsu/ооп/ex5/build/tests/mytst_exec_e3b0c442_tests.cmake")
+else()
+  add_test(mytst_exec_NOT_BUILT mytst_exec_NOT_BUILT)
+endif()
