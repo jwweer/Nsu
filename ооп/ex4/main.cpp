@@ -28,8 +28,8 @@ std::map<int, int> countFrequenciesAlgorithm(const std::vector<int>& vec) {
 }
 
 void printFrequencies(const std::map<int, int>& freq) {
-    for (const auto& [value, count] : freq)
-        std::cout << value << " " << count << "\n";
+    for (const std::pair<const int, int>& p : freq)
+        std::cout << p.first << " " << p.second << "\n";
 }
 
 int main() {
@@ -49,10 +49,10 @@ int main() {
 
     std::cout << "2. Количество: " << first.size() << " " << second.size() << "\n";
 
-    auto freqFirstFor  = countFrequenciesFor(first);
-    auto freqFirstAlg  = countFrequenciesAlgorithm(first);
-    auto freqSecondFor = countFrequenciesFor(second);
-    auto freqSecondAlg = countFrequenciesAlgorithm(second);
+    std::map<int, int> freqFirstFor  = countFrequenciesFor(first);
+    std::map<int, int> freqFirstAlg  = countFrequenciesAlgorithm(first);
+    std::map<int, int> freqSecondFor = countFrequenciesFor(second);
+    std::map<int, int> freqSecondAlg = countFrequenciesAlgorithm(second);
 
     std::cout << "3. Частоты (1-й for):\n";
     printFrequencies(freqFirstFor);
@@ -73,7 +73,8 @@ int main() {
     std::cout << "4. Сумма 1-й: " << sumFirst1 << " " << sumFirst2 << "\n";
     std::cout << "4. Сумма 2-й: " << sumSecond1 << " " << sumSecond2 << "\n";
 
-    auto sumFirst10 = [](const std::vector<int>& v) {
+    // Лямбда, возвращающая int
+    int (*sumFirst10)(const std::vector<int>&) = [](const std::vector<int>& v) -> int {
         std::size_t n = std::min<std::size_t>(10, v.size());
         return std::accumulate(v.begin(), v.begin() + n, 0);
     };
@@ -88,12 +89,12 @@ int main() {
     std::cout << "4.II.1. Произведение: " << productFirst << " " << productSecond << "\n";
 
     std::set<int> secondDuplicates;
-    for (const auto& [value, count] : freqSecondFor)
-        if (count >= 2) secondDuplicates.insert(value);
+    for (const std::pair<const int, int>& p : freqSecondFor)
+        if (p.second >= 2) secondDuplicates.insert(p.first);
 
     std::set<int> firstFrequent;
-    for (const auto& [value, count] : freqFirstFor)
-        if (count > 3) firstFrequent.insert(value);
+    for (const std::pair<const int, int>& p : freqFirstFor)
+        if (p.second > 3) firstFrequent.insert(p.first);
 
     std::cout << "4.II.2. 2-й >=2: ";
     for (int v : secondDuplicates) std::cout << v << " ";
